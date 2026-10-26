@@ -20,6 +20,28 @@ const FILES = [
 const IMG = {};
 FILES.forEach(f => { const i = new Image(); i.onload = () => i.ok = true; i.src = 'imagens/' + f; IMG[f] = i; });
 
+// ---------- SONS (pasta "sons", arquivos .mp3) ----------
+// Se um arquivo não existir, o jogo simplesmente fica sem aquele som.
+const SONS = ['tiro','recarregar','praga-dano','praga-morre','seitista-dano','seitista-morre','dano-vaca',
+  'cristal','alquimia-mistura','transmutacao','fala-vaca','fala-joaquim',
+  'musica-fazenda','musica-floresta','musica-final'];
+const SND = {};
+SONS.forEach(n => { SND[n] = new Audio('sons/' + n + '.mp3'); });
+let mudo = false, mus = null;
+function som(n, vol) {
+  const a = SND[n]; if (!a || mudo) return;
+  const c = a.cloneNode(); c.volume = vol || 0.6; c.play().catch(() => {});
+}
+function musica(n) {
+  if (mus) mus.pause();
+  mus = SND[n] || null;
+  if (mus) { mus.loop = true; mus.volume = 0.35; mus.muted = mudo; mus.currentTime = 0; mus.play().catch(() => {}); }
+}
+function falaSom() {
+  const q = D.lines[D.i][0];
+  if (q === 'Vaquinha') som('fala-vaca'); else if (q === 'Seu Joaquim') som('fala-joaquim');
+}
+
 function bg(f, dark) {
   const i = IMG[f];
   if (i && i.ok) X.drawImage(i, 0, 0, W, H); else { X.fillStyle = '#2d6a2d'; X.fillRect(0, 0, W, H); }
@@ -48,14 +70,14 @@ const BND = {
   farm:   { x1: 30, x2: 575, y1: 330, y2: 465 }, // trator e celeiro bloqueiam a direita
   forest: { x1: 30, x2: 930, y1: 305, y2: 465 }
 };
-let S = 'menu', level = 'farm', D = null, LD = null, P, pragas, inim, tiros, kills, power, mix, crystal, joaquim, spawnT, flash, credY, debug = false;
+let S = 'menu', level = 'farm', D = null, LD = null, P, pragas, inim, tiros, kills, power, mix, crystal, joaquim, spawnT, flash, credY, dT = 0, debug = false;
 
 function resetPlayer() {
   P = { x: 200, y: 400, hp: 5, ammo: 6, max: 6, dir: 'r', h: 'r', moving: false, walk: 0, rl: 0, cool: 0, aim: 0, inv: 0, human: false };
 }
 
 // ---------- DIÁLOGOS ----------
-function openDialog(lines, cb) { D = { lines, i: 0, cb: cb || (() => S = 'play') }; S = 'dialog'; }
+function openDialog(lines, cb) { D = { lines, i: 0, cb: cb || (() => S = 'play') }; S = 'dialog'; falaSom(); }
 const TXT = {
   intro: [
     ['Narrador', 'Na Fazendinha do Amor, uma vaquinha ajuda a proteger a plantação do Seu Joaquim.'],
@@ -97,7 +119,7 @@ function startFarm() {
   openDialog(TXT.intro);
 }
 function startForest() {
-  level = 'forest'; const keep = P.hp; resetPlayer(); P.hp = Math.max(keep, 3); P.x = 120; P.y = 400;
+  musica('musica-floresta'); level = 'forest'; const keep = P.hp; resetPlayer(); P.hp = Math.max(keep, 3); P.x = 120; P.y = 400;
   pragas = []; inim = []; tiros = []; kills = 0; spawnT = 0; power = false; joaquim = null;
   crystal = { x: 330, y: 395, taken: false };
   openDialog(TXT.floresta);
@@ -111,23 +133,28 @@ function loop() {
 }
 
 function update() {
-  if (S === 'menu') { if (OK()) startLoading('farm'); }
+  if (S === 'menu') { if (OK()) { musica('musica-fazenda'); startLoading('farm'); } }
   else if (S === 'loading') { if (++LD.t > 140) LD.to === 'farm' ? startFarm() : startForest(); }
   else if (S === 'dialog') {
-    if (OK()) { D.i++; if (D.i >= D.lines.length) { const cb = D.cb; D = null; cb(); } }
+    if (OK()) { D.i++; if (D.i >= D.lines.length) { const cb = D.cb; D = null; cb(); } else falaSom(); }
   }
   else if (S === 'play') playUpdate();
   else if (S === 'alchemy') {
-    if (J.Space) { mix++; if (mix >= 10) { power = true; crystal.taken = true; P.max = 8; P.ammo = 8; S = 'play'; } }
+    if (J.Space) { mix++; som('alquimia-mistura'); if (mix >= 10) { power = true; crystal.taken = true; P.max = 8; P.ammo = 8; S = 'play'; } }
   }
   else if (S === 'transform') {
     flash++;
-    if (flash === 60) P.human = true;
-    if (flash > 120) openDialog(TXT.fim2, () => { S = 'credits'; credY = H; });
+    if (flash === 1) som('transmutacao'); if (flash === 60) P.human = true;
+    if (flash > 120) openDialog(TXT.fim2, () => { S = 'dance'; dT = 0; P.x = 480; P.y = 400; P.moving = false; musica('musica-final'); });
+  }
+  else if (S === 'dance') {
+    dT++; P.h = Math.floor(dT / 14) % 2 ? 'l' : 'r'; P.by = -Math.abs(Math.sin(dT / 7)) * 20;
+    if (dT > 420 || J.Enter) { P.by = 0; S = 'credits'; credY = H; }
   }
   else if (S === 'credits') { credY -= 0.8; if (J.Enter && credY < -300) S = 'menu'; }
   else if (S === 'over') { if (J.Enter) startLoading(level); }
   if (J.KeyB) debug = !debug;
+  if (J.KeyM) { mudo = !mudo; if (mus) mus.muted = mudo; }
 }
 
 function playUpdate() {
@@ -148,14 +175,14 @@ function playUpdate() {
   P.y = Math.max(b.y1, Math.min(b.y2, P.y));
 
   // recarregar (o leite enche a arma)
-  if (J.KeyR && P.rl <= 0 && P.ammo < P.max) P.rl = 60;
+  if (J.KeyR && P.rl <= 0 && P.ammo < P.max) { P.rl = 60; som('recarregar'); }
   if (P.rl > 0 && --P.rl === 0) P.ammo = P.max;
   // atirar
   if (P.cool > 0) P.cool--; if (P.aim > 0) P.aim--; if (P.inv > 0) P.inv--;
   if (K.Space && P.cool <= 0 && P.rl <= 0 && P.ammo > 0) {
     const v = { l: [-1, 0], r: [1, 0], u: [0, -1], d: [0, 1] }[P.dir];
     tiros.push({ x: P.x + v[0] * 30, y: P.y - 46 + v[1] * 12, vx: v[0] * 9, vy: v[1] * 9, dmg: power ? 2 : 1 });
-    P.ammo--; P.cool = 14; P.aim = 14;
+    P.ammo--; P.cool = 14; P.aim = 14; som('tiro');
   }
   // tiros
   tiros.forEach(t => { t.x += t.vx; t.y += t.vy; });
@@ -177,7 +204,7 @@ function playUpdate() {
     moveEnemies(inim, b);
     kills = killsFrom(inim, kills);
     // cristal + alquimia
-    if (crystal && !crystal.taken && Math.hypot(P.x - crystal.x, P.y - crystal.y) < 45) { S = 'alchemy'; mix = 0; }
+    if (crystal && !crystal.taken && Math.hypot(P.x - crystal.x, P.y - crystal.y) < 45) { S = 'alchemy'; mix = 0; som('cristal'); }
     if (kills >= 8 && !joaquim) { joaquim = { x: 860, y: 410 }; openDialog(TXT.achou); }
     if (joaquim && Math.hypot(P.x - joaquim.x, P.y - joaquim.y) < 80) { P.h = 'r'; openDialog(TXT.fim1, () => { S = 'transform'; flash = 0; }); }
   }
@@ -196,15 +223,15 @@ function moveEnemies(list, b) {
     e.x = Math.max(b.x1, Math.min(b.x2, e.x)); e.y = Math.max(b.y1, Math.min(b.y2, e.y));
     // tiro acerta?
     tiros.forEach(t => {
-      if (!t.dead && Math.abs(t.x - e.x) < e.h * 0.35 + 6 && t.y > e.y - e.h && t.y < e.y + 6) { t.dead = true; e.hp -= t.dmg; e.hit = 6; }
+      if (!t.dead && Math.abs(t.x - e.x) < e.h * 0.35 + 6 && t.y > e.y - e.h && t.y < e.y + 6) { t.dead = true; e.hp -= t.dmg; e.hit = 6; som(e.h < 60 ? 'praga-dano' : 'seitista-dano', 0.4); }
     });
     // encosta na vaquinha?
-    if (P.inv <= 0 && Math.abs(P.x - e.x) < 30 && Math.abs(P.y - e.y) < 18) { P.hp--; P.inv = 70; }
+    if (P.inv <= 0 && Math.abs(P.x - e.x) < 30 && Math.abs(P.y - e.y) < 18) { P.hp--; P.inv = 70; som('dano-vaca'); }
     if (e.hit) e.hit--;
   });
 }
 function killsFrom(list, k) {
-  for (let i = list.length - 1; i >= 0; i--) if (list[i].hp <= 0) { list.splice(i, 1); k++; }
+  for (let i = list.length - 1; i >= 0; i--) if (list[i].hp <= 0) { som(list[i].h < 60 ? 'praga-morre' : 'seitista-morre'); list.splice(i, 1); k++; }
   return k;
 }
 
@@ -235,10 +262,10 @@ function drawWorld() {
   q.push({ y: P.y, f: () => {
     shadow(P.x, P.y, 28);
     if (P.inv > 0 && Math.floor(P.inv / 5) % 2) X.globalAlpha = 0.5;
-    spr(pSprite(), P.x, P.y, 96, '#fff'); X.globalAlpha = 1;
+    spr(pSprite(), P.x, P.y + (P.by || 0), 96, '#fff'); X.globalAlpha = 1;
   } });
-  pragas.forEach(e => q.push({ y: e.y, f: () => { shadow(e.x, e.y, 18); spr(e.face === 'l' ? 'praga-direita.png' : 'praga-esquerda.png', e.x, e.y, e.h, '#888'); } }));
-  inim.forEach(e => q.push({ y: e.y, f: () => { shadow(e.x, e.y, 28); if (e.hit) X.globalAlpha = 0.6; spr(e.face === 'l' ? 'seitista-direita.png' : 'seitista-esquerda.png', e.x, e.y, e.h, '#a22'); X.globalAlpha = 1; } }));
+  pragas.forEach(e => q.push({ y: e.y, f: () => { shadow(e.x, e.y, 18); spr(e.face === 'l' ? 'praga-esquerda.png' : 'praga-direita.png', e.x, e.y, e.h, '#888'); } }));
+  inim.forEach(e => q.push({ y: e.y, f: () => { shadow(e.x, e.y, 28); if (e.hit) X.globalAlpha = 0.6; spr(e.face === 'l' ? 'seitista-esquerda.png' : 'seitista-direita.png', e.x, e.y, e.h, '#a22'); X.globalAlpha = 1; } }));
   if (crystal && !crystal.taken) q.push({ y: crystal.y, f: () => {
     const bob = Math.sin(Date.now() / 300) * 4;
     X.fillStyle = 'rgba(140,120,255,.35)'; X.beginPath(); X.arc(crystal.x, crystal.y - 24 + bob, 30, 0, 7); X.fill();
@@ -307,11 +334,18 @@ function draw() {
   }
   else {
     drawWorld();
-    if (S !== 'menu') hud();
+    if (S !== 'dance') hud();
     if (S === 'transform') {
       const a = flash < 60 ? flash / 60 : 1 - (flash - 60) / 60;
       X.fillStyle = `rgba(255,255,255,${Math.max(0, a)})`; X.fillRect(0, 0, W, H);
       txt('TRANSMUTAÇÃO!', W / 2, 90, 44, '#9a5cff', 'center');
+    }
+    if (S === 'dance') {
+      for (let i = 0; i < 10; i++) {
+        const x = 480 + Math.cos(dT / 20 + i * 0.63) * 170, y = 300 + Math.sin(dT / 15 + i) * 70;
+        txt('✦', x, y, 26, ['#ffe28a', '#9ec9ff', '#c9a8ff'][i % 3], 'center');
+      }
+      txt('Um novo visual!', W / 2, 90, 40, '#ffe28a', 'center');
     }
     if (S === 'over') {
       X.fillStyle = 'rgba(0,0,0,.7)'; X.fillRect(0, 0, W, H);

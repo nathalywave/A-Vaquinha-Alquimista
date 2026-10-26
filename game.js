@@ -27,15 +27,15 @@ const SONS = ['tiro','recarregar','praga-dano','praga-morre','seitista-dano','se
   'musica-fazenda','musica-floresta','musica-final'];
 const SND = {};
 SONS.forEach(n => { SND[n] = new Audio('sons/' + n + '.mp3'); });
-let mudo = false, mus = null;
+let mudoSfx = false, mudoMus = false, mus = null;
 function som(n, vol) {
-  const a = SND[n]; if (!a || mudo) return;
+  const a = SND[n]; if (!a || mudoSfx) return;
   const c = a.cloneNode(); c.volume = vol || 0.6; c.play().catch(() => {});
 }
 function musica(n) {
   if (mus) mus.pause();
   mus = SND[n] || null;
-  if (mus) { mus.loop = true; mus.volume = 0.35; mus.muted = mudo; mus.currentTime = 0; mus.play().catch(() => {}); }
+  if (mus) { mus.loop = true; mus.volume = 0.35; mus.muted = mudoMus; mus.currentTime = 0; mus.play().catch(() => {}); }
 }
 function falaSom() {
   const q = D.lines[D.i][0];
@@ -154,7 +154,8 @@ function update() {
   else if (S === 'credits') { credY -= 0.8; if (J.Enter && credY < -300) S = 'menu'; }
   else if (S === 'over') { if (J.Enter) startLoading(level); }
   if (J.KeyB) debug = !debug;
-  if (J.KeyM) { mudo = !mudo; if (mus) mus.muted = mudo; }
+  if (J.KeyM) { mudoMus = !mudoMus; if (mus) mus.muted = mudoMus; }
+  if (J.KeyN) mudoSfx = !mudoSfx;
 }
 
 function playUpdate() {
@@ -264,8 +265,8 @@ function drawWorld() {
     if (P.inv > 0 && Math.floor(P.inv / 5) % 2) X.globalAlpha = 0.5;
     spr(pSprite(), P.x, P.y + (P.by || 0), 96, '#fff'); X.globalAlpha = 1;
   } });
-  pragas.forEach(e => q.push({ y: e.y, f: () => { shadow(e.x, e.y, 18); spr(e.face === 'l' ? 'praga-esquerda.png' : 'praga-direita.png', e.x, e.y, e.h, '#888'); } }));
-  inim.forEach(e => q.push({ y: e.y, f: () => { shadow(e.x, e.y, 28); if (e.hit) X.globalAlpha = 0.6; spr(e.face === 'l' ? 'seitista-esquerda.png' : 'seitista-direita.png', e.x, e.y, e.h, '#a22'); X.globalAlpha = 1; } }));
+  pragas.forEach(e => q.push({ y: e.y, f: () => { shadow(e.x, e.y, 18); spr(e.face === 'l' ? 'praga-direita.png' : 'praga-esquerda.png', e.x, e.y, e.h, '#888'); } }));
+  inim.forEach(e => q.push({ y: e.y, f: () => { shadow(e.x, e.y, 28); if (e.hit) X.globalAlpha = 0.6; spr(e.face === 'l' ? 'seitista-direita.png' : 'seitista-esquerda.png', e.x, e.y, e.h, '#a22'); X.globalAlpha = 1; } }));
   if (crystal && !crystal.taken) q.push({ y: crystal.y, f: () => {
     const bob = Math.sin(Date.now() / 300) * 4;
     X.fillStyle = 'rgba(140,120,255,.35)'; X.beginPath(); X.arc(crystal.x, crystal.y - 24 + bob, 30, 0, 7); X.fill();
@@ -361,6 +362,7 @@ function draw() {
       txt('ENTER ▶', W - 60, 448, 14, '#aaa', 'right');
     }
   }
+  txt(`M: música ${mudoMus ? 'OFF' : 'ON'}   N: efeitos ${mudoSfx ? 'OFF' : 'ON'}`, W - 12, H - 8, 13, '#ddd', 'right');
 }
 
 loop();

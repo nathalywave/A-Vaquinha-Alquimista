@@ -1,0 +1,26 @@
+Termo de Uso de Inteligência Artificial
+
+Este documento declara como ferramentas de Inteligência Artificial (IA) foram utilizadas durante o desenvolvimento deste projeto, submetido à IFPF Game Jam.
+
+
+1. Uso de Inteligência Artificial
+
+A equipe Vaquinhas Alquimistas declara que foi feito o uso de ferramentas de inteligência artificial (IA) durante o desenvolvimento do projeto "A Vaquinha Alquimista" para a IFPF Game Jam.
+
+
+2. Ferramentas utilizadas
+
+Ferramenta: Claude (Anthropic)
+Finalidade: auxílio com código (geração e organização do código em HTML5 Canvas e JavaScript)
+Etapa ou recurso do projeto: arquivos index.html e game.js, incluindo movimento e limites de área da personagem, sistema de tiros e recarga, comportamento dos inimigos, controle das fases, caixas de diálogo, tela de menu e carregamento, minigame de alquimia, cena final e créditos.
+
+Ferramenta: Claude (Anthropic)
+Finalidade: organização do roteiro em falas de diálogo
+Etapa ou recurso do projeto: textos de diálogo dentro do game.js, escritos a partir do roteiro criado pela equipe (Josieli Souza).
+
+Observação: nenhuma ferramenta de IA generativa foi usada para criar arte (sprites, fundos, mapas, ilustrações, interface), música, efeitos sonoros ou dublagens. Toda a arte do jogo foi desenhada pelo artista da equipe, Lucas Trew.
+
+
+3. Declaração
+
+Declaramos que as informações apresentadas neste documento são verdadeiras e que o uso de ferramentas de Inteligência Artificial no projeto foi informado de maneira transparente.
